@@ -54,6 +54,18 @@ namespace EduSync.Controllers
             return Ok(dto);
         }
 
+        [HttpGet("by-course/{courseId}")]
+        [AllowAnonymous]  // Allows students (or even unauthenticated users) to access
+        public async Task<ActionResult<IEnumerable<AssessmentDto>>> GetAssessmentsByCourse(Guid courseId)
+        {
+            var assessments = await _context.Assessments
+                .Where(a => a.CourseId == courseId)
+                .ToListAsync();
+
+            var dtos = _mapper.Map<List<AssessmentDto>>(assessments);
+            return Ok(dtos);
+        }
+
         // PUT: api/Assessments/5
         [HttpPut("{id}")]
         [Authorize(Roles = "Instructor")]

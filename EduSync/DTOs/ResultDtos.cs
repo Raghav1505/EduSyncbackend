@@ -12,8 +12,9 @@ namespace EduSync.DTOs
         public Guid ResultId { get; set; }
         public Guid? AssessmentId { get; set; }
         public Guid? UserId { get; set; }
-        public int Score { get; set; }
-        public DateTime AttemptDate { get; set; }
+        public int? Score { get; set; }
+        public DateTime? AttemptDate { get; set; }
+        public string? Answers { get; set; }
     }
 
     /// <summary>
@@ -32,6 +33,8 @@ namespace EduSync.DTOs
 
         [Required]
         public DateTime AttemptDate { get; set; }
+
+        public string Answers { get; set; } = default!;
     }
 
     /// <summary>
@@ -44,9 +47,13 @@ namespace EduSync.DTOs
 
         public Guid? UserId { get; set; }
 
+        public string? Answers { get; set; }
+
         [Range(0, int.MaxValue)]
         public int? Score { get; set; }
 
         public DateTime? AttemptDate { get; set; }
+
+
     }
 }

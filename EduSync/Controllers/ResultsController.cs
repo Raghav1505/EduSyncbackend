@@ -9,6 +9,8 @@ using EduSync.Models;
 using EduSync.DTOs;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
+using Newtonsoft.Json;
+using System.Security.Claims;
 
 namespace EduSync.Controllers
 {
@@ -31,8 +33,15 @@ namespace EduSync.Controllers
         [Authorize(Roles = "Student")]
         public async Task<ActionResult<IEnumerable<ResultDto>>> GetResults()
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized("User ID missing in token");
+
+            var userId = Guid.Parse(userIdClaim);
+
             var results = await _context.Results
                 .AsNoTracking()
+                .Where(r => r.UserId == userId)
                 .ToListAsync();
 
             var dtos = _mapper.Map<List<ResultDto>>(results);
@@ -52,6 +61,63 @@ namespace EduSync.Controllers
 
             var dto = _mapper.Map<ResultDto>(result);
             return Ok(dto);
+        }
+
+        // GET: api/Results/my
+        [HttpGet("my")]
+        [Authorize(Roles = "Student")]
+        public async Task<ActionResult<IEnumerable<StudentResultDto>>> GetMyDetailedResults()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized("User ID missing in token");
+
+            var userId = Guid.Parse(userIdClaim);
+
+            var results = await _context.Results
+                .AsNoTracking()
+                .Where(r => r.UserId == userId)
+                .ToListAsync();
+
+            var detailed = new List<StudentResultDto>(results.Count);
+
+            foreach (var r in results)
+            {
+                var assessment = await _context.Assessments
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(a => a.AssessmentId == r.AssessmentId);
+                if (assessment == null) continue;
+
+                var questions = JsonConvert.DeserializeObject<Question[]>(
+                    assessment.Questions ?? "[]")!;
+                var answers = JsonConvert.DeserializeObject<StudentAnswer[]>(
+                    r.Answers ?? "[]")!;
+
+                var qDetails = new List<QuestionDetailDto>(questions.Length);
+                for (int i = 0; i < questions.Length; i++)
+                {
+                    var q = questions[i];
+                    var a = answers.FirstOrDefault(sa => sa.QuestionIndex == i);
+                    qDetails.Add(new QuestionDetailDto
+                    {
+                        QuestionText = q.QuestionText,
+                        Options = q.Options,
+                        CorrectAnswer = q.CorrectAnswer,
+                        SelectedAnswer = a?.SelectedOption ?? string.Empty
+                    });
+                }
+
+                detailed.Add(new StudentResultDto
+                {
+                    ResultId = r.ResultId,
+                    AssessmentId = r.AssessmentId!.Value,
+                    Score = r.Score!.Value,
+                    AttemptDate = r.AttemptDate!.Value,
+                    Questions = qDetails
+                });
+            }
+
+            return Ok(detailed);
         }
 
         // PUT: api/Results/5
@@ -76,23 +142,6 @@ namespace EduSync.Controllers
             }
 
             return NoContent();
-        }
-
-        // POST: api/Results
-        [HttpPost]
-        [Authorize(Roles = "Student")]
-        public async Task<ActionResult<ResultDto>> PostResult([FromBody] CreateResultDto dto)
-        {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
-            var assessment = await _context.Assessments
-                .AsNoTracking()
-
-            _context.Results.Add(result);
-            await _context.SaveChangesAsync();
-
-            var resultDto = _mapper.Map<ResultDto>(result);
-            return CreatedAtAction(nameof(GetResult), new { id = result.ResultId }, resultDto);
         }
 
         // DELETE: api/Results/5

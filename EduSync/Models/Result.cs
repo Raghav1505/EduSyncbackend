@@ -18,4 +18,6 @@ public partial class Result
     public virtual Assessment? Assessment { get; set; }
 
     public virtual User? User { get; set; }
+
+    public string? Answers { get; set; }
 }
