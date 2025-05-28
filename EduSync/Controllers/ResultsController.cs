@@ -85,8 +85,8 @@ namespace EduSync.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var result = _mapper.Map<Result>(dto);
-            result.ResultId = Guid.NewGuid();
+            var assessment = await _context.Assessments
+                .AsNoTracking()
 
             _context.Results.Add(result);
             await _context.SaveChangesAsync();
@@ -112,5 +112,4 @@ namespace EduSync.Controllers
         private bool ResultExists(Guid id)
             => _context.Results.Any(e => e.ResultId == id);
     }
-
 }
